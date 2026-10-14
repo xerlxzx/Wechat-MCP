@@ -6,6 +6,8 @@ to follow [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-15
+
 ### Changed
 
 - `discover` stops with `source_inventory_limit` after 4096 entries under
@@ -19,7 +21,7 @@ to follow [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 - The write-only decoded-image cache (`state/decoded/`). Existing folders can
   be deleted.
 
-## [0.1.0] - Initial public release
+## 0.1.0 - Initial release (not published as a tag)
 
 First public release. Experimental. M1 acceptance remains blocked (see the
 README milestones table).
@@ -70,5 +72,5 @@ README milestones table).
 - The bridge supports the tested WeChat line and fails closed on other builds
   with `unsupported_build`.
 
-[Unreleased]: https://github.com/xerlxzx/Wechat-MCP/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/xerlxzx/Wechat-MCP/releases/tag/v0.1.0
+[Unreleased]: https://github.com/xerlxzx/Wechat-MCP/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/xerlxzx/Wechat-MCP/releases/tag/v0.1.1

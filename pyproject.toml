@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "wechat-bridge"
-version = "0.1.0"
+version = "0.1.1"
 description = "Local read-only WeChat source bridge"
 requires-python = ">=3.14,<3.15"
 license = "MIT"
