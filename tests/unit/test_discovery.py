@@ -97,3 +97,15 @@ def test_rewritten_file_with_same_salt_keeps_incarnation_pending_reverification(
     assert new.file_identity != old.file_identity
     assert new.replaced
     assert next(d for d in again.databases if d.relative_path == new.relative_path).database_id == old.database_id
+
+
+def test_oversized_source_tree_is_rejected(tmp_path, source_root):
+    from wechat_bridge.core.errors import BridgeError
+    from wechat_bridge.source.discovery import discover
+    cfg = config(tmp_path, source_root)
+    extra = cfg.account_root / "db_storage" / "extra"
+    extra.mkdir()
+    for index in range(4100):
+        (extra / f"n{index}.txt").write_bytes(b"")
+    with pytest.raises(BridgeError, match="source_inventory_limit"):
+        discover(cfg)

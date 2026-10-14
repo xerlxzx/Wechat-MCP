@@ -142,6 +142,9 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         print(json.dumps({"error": "operation_cancelled"}), file=sys.stderr if args.command == 'serve' else sys.stdout)
         return 130
+    except Exception:
+        print(json.dumps({"error": "internal_error"}), file=sys.stderr if args.command == 'serve' else sys.stdout)
+        return 2
 
 if __name__ == "__main__":
     raise SystemExit(main())

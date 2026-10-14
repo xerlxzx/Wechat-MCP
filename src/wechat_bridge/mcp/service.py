@@ -2,7 +2,6 @@
 from functools import cached_property
 
 from ..archive.importer import archive_status
-from ..attachments.cache import cache_decoded
 from ..attachments.resolver import resolve_attachment
 from ..core.config import Config, read_private_json, reject_symlinks
 from ..core.errors import BridgeError
@@ -85,7 +84,6 @@ class ToolService:
                 data = result.decoded.data
                 if len(data) > max_bytes:
                     raise BridgeError('content_too_large')
-                cache_decoded(result.decoded, result.source_sha256, self.config)
                 metadata |= {'mime_type': {'PNG': 'image/png', 'JPEG': 'image/jpeg', 'WEBP': 'image/webp'}[result.decoded.format],
                              'width': result.decoded.width, 'height': result.decoded.height,
                              'decoder_version': result.decoded.decoder_version}

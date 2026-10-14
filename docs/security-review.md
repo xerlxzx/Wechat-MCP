@@ -53,11 +53,11 @@ limitation meanwhile.
 | P-1 | Medium | Release | No LICENSE, SECURITY.md or CODE_OF_CONDUCT.md; dangling links | Resolved |
 | P-3 | Low | Leakage | Aggregates and per-database byte sizes from the maintainer's real archive in a research manifest | Resolved |
 | H-1 | Medium | Data handling | Plaintext keys, archive and media at rest; extra key copies never removed; backup exposure | Known limitation, tracked |
-| H-2 | Low | Data handling | Decoded-image cache is write-only, unbounded and plaintext | Known limitation, tracked |
+| H-2 | Low | Data handling | Decoded-image cache is write-only, unbounded and plaintext | Resolved: the cache write was removed |
 | H-3 | Low | Secret handling | Setup helper inherits the full environment and exposes the account path in argv | Known limitation, tracked |
 | H-4 | Low | Supply chain | Native library path is trusted without pinning; dependency CVE status unverified | Known limitation, tracked |
 | H-5 | Low | Injection | Retrieved text carries no per-item trust marker (indirect prompt injection) | Known limitation, tracked |
-| H-6 | Low | Data exposure | CLI prints raw tracebacks for non-`BridgeError` failures | Known limitation, tracked |
+| H-6 | Low | Data exposure | CLI prints raw tracebacks for non-`BridgeError` failures | Resolved: the CLI prints `internal_error` for unexpected exceptions |
 | H-7 | Info | Authz | `source_acceptance` trusts any `proofs/*.json` the user owns | Known limitation, tracked |
 | H-8 | Info | Configuration | State-in-repo guard is index-based and only meaningful from a checkout | Known limitation, tracked |
 
@@ -206,7 +206,7 @@ inspect a live state directory.
 
 **Title:** Decoded-image cache is write-only, unbounded and plaintext.
 
-**Status:** Known limitation, tracked in [issue #2](https://github.com/xerlxzx/Wechat-MCP/issues/2).
+**Status:** Resolved (cache write removed; tracked in [issue #2](https://github.com/xerlxzx/Wechat-MCP/issues/2)).
 
 **Severity:** Low
 
@@ -350,7 +350,7 @@ to run clients without write or network tools.
 
 **Title:** The CLI catches only `BridgeError`; other exceptions print a raw traceback.
 
-**Status:** Known limitation, tracked in [issue #5](https://github.com/xerlxzx/Wechat-MCP/issues/5).
+**Status:** Resolved (catch-all added; tracked in [issue #5](https://github.com/xerlxzx/Wechat-MCP/issues/5)).
 
 **Severity:** Low
 
@@ -422,7 +422,8 @@ repository root), but for an installed wheel it resolves to a directory inside
 correct.
 
 **Mitigation:** Document that the guard applies to source checkouts, or search
-upward for `pyproject.toml`.
+upward for `pyproject.toml`. `docs/architecture.md` now states that the guard
+only protects checkouts.
 
 **Confidence:** HIGH
 

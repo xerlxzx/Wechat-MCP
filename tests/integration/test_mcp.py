@@ -136,6 +136,7 @@ def test_resource_failures_keep_safe_codes_without_traceback_or_private_path(tmp
     from wechat_bridge.archive.importer import refresh_archive
     from wechat_bridge.mcp.server import create_server
     from tests.integration.test_importer import factory
+    import wechat_bridge.mcp.service as service_module
     case, _ = service_case(tmp_path)
     async def scenario():
         async with Client(create_server(case.config, watch=False)) as client:
@@ -145,9 +146,12 @@ def test_resource_failures_keep_safe_codes_without_traceback_or_private_path(tmp
             file_uri = (await client.call_tool('get_attachment', {'attachment_id': file['attachment_id']})).structured_content['resource_uri']
             image_uri = (await client.call_tool('get_attachment', {'attachment_id': image['attachment_id']})).structured_content['resource_uri']
             private_path = str(case.config.state_dir / 'decoded' / 'private-cache')
-            def failed_cache(*args, **kwargs):
-                raise OSError(errno.ENOSPC, 'disk full', private_path)
-            monkeypatch.setattr('wechat_bridge.mcp.service.cache_decoded', failed_cache)
+            real_resolve = service_module.resolve_attachment
+            def failed_resolve(ref, *args, **kwargs):
+                if ref.kind == 'image':
+                    raise OSError(errno.ENOSPC, 'disk full', private_path)
+                return real_resolve(ref, *args, **kwargs)
+            monkeypatch.setattr(service_module, 'resolve_attachment', failed_resolve)
             with pytest.raises(MCPError, match='internal_error') as issue:
                 await client.read_resource(image_uri)
             assert private_path not in str(issue.value)

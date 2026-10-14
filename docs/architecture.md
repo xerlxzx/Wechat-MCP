@@ -32,7 +32,7 @@ invariant; read it before editing the module.
 | `adapters/` | Interpret source rows for the supported builds only (`SUPPORTED_BUILDS` in `adapters/wechat_4_1.py`: 270102 and 270135 of WeChat 4.1.15). Bounded schema observation and identifier whitelisting; decode messages, replies, protobuf wire data; derive stable opaque IDs from a private persisted identity secret. Unmapped/malformed records keep their source identity and are reported, never dropped. | `wechat_4_1`, `schema`, `messages`, `replies`, `identity`, `wire`, `models` |
 | `archive/` | Private owner-only SQLite archive (separate from the source). Full bounded reconciliation into a *generation*; publish only a complete, stable-source generation via one atomic pointer. Failed/interrupted imports keep the prior generation; current + previous are retained. | `store`, `importer`, `reconcile`, `watcher` |
 | `search/` | FTS index built inside the import transaction; NFKC/casefold literal substring matching over Unicode unigrams/bigrams; small indexed queries with no decryption or import at query time; authenticated opaque cursors bound to method, filters, limit and a pinned generation. | `index`, `tokenize`, `repository`, `cursor` |
-| `attachments/` | Exact resource/hardlink joins on tested layouts; no-follow descriptor reads pinned beneath the account's media roots with size/digest/streaming SHA-256 checks; static image decoding; owner-only content-addressed caches. Media key material is separate from database keys. | `mapping`, `resolver`, `images`, `cache`, `models` |
+| `attachments/` | Exact resource/hardlink joins on tested layouts; no-follow descriptor reads pinned beneath the account's media roots with size/digest/streaming SHA-256 checks; static image decoding; Media key material is separate from database keys. | `mapping`, `resolver`, `images`, `models` |
 | `mcp/` | `service` produces verified bounded bytes and safe status independently of protocol; `server` exposes nine typed read-only tools over stdio (stdout is protocol only). See [mcp.md](mcp.md). | `service`, `server` |
 | `setup/` | One-time key capture, never called by retrieval. Expiring plan → ad-hoc-signed *copy* of WeChat under Apple LLDB → page-authenticated, natively verified keys → idempotent recovery. See [setup.md](setup.md). | `prepare`, `capture`, `lldb_capture`, `recovery`, `lock`, `system` |
 | `proof.py` | Source-acceptance gate: private selection of samples with explicit expected values; redacted public report. | none |
@@ -44,7 +44,7 @@ orchestrate:
 
 | Module | Purpose |
 | --- | --- |
-| `core/config.py` | Frozen `Config`; owner-only, symlink-rejecting, `O_NOFOLLOW`, size-bounded, atomic (temp + rename + fsync under `flock`) private-state I/O. Rejects state inside the repository (`state_inside_repository`). |
+| `core/config.py` | Frozen `Config`; owner-only, symlink-rejecting, `O_NOFOLLOW`, size-bounded, atomic (temp + rename + fsync under `flock`) private-state I/O. Rejects state inside the repository (`state_inside_repository`); the guard runs in `create_config` and only means something for a source checkout. |
 | `core/errors.py` | `BridgeError(code)`. Public output is a code, never source material. |
 | `core/limits.py` | Public query-contract limits (values in [mcp.md](mcp.md#limits)). Other bounds live next to the code that uses them. |
 | `core/validate.py` | Shared strict input validators raising a caller-chosen `BridgeError` code. |
@@ -91,7 +91,6 @@ Private state lives outside the repository, by default in
 | `image-material.json` | Optional explicit image-key candidates; when absent, material is derived from known app-data locations |
 | `adapter-schemas.json` | Schema observation written each time an adapter opens |
 | `archive.sqlite3` (+ WAL/SHM) | Archive generations and search index |
-| `decoded/` | Content-addressed, decoder-versioned media cache |
 | `setup/<plan-id>/`, `setup/active.json` | Setup plans, journals, capture diagnostics; the plan that owns setup now |
 | `proofs/<uuid>.json` | Private proof evidence |
 | `.lock`, `.archive-import.lock`, `.archive-watcher.lock`, `.setup.lock` | `flock` files, described under [Locks](#locks) |
@@ -119,7 +118,8 @@ holder leaves no stale lock.
 
 - **Source reads:** read-only flags, `query_only`, restrictive authorizer, 2 s
   busy timeout, 5 s query deadline, 8 MiB result cap (`result_too_large`).
-  SQLite may coordinate through SHM.
+  SQLite may coordinate through the `-shm` file (shared-memory coordination,
+  not a write to database content).
   Per-database observation times; no atomic account-wide snapshot is claimed.
 - **Key verification** (`verify-keys`) authenticates a schema read per database
   using an exact account/path/salt/incarnation match. It does not prove

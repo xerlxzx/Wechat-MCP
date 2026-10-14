@@ -50,19 +50,12 @@ def test_animated_and_wxgf_formats_are_unsupported():
             decode_image(io.BytesIO(encoded),material=None)
 
 
-def test_image_limits_and_private_atomic_cache(tmp_path):
+def test_image_size_limit():
     from wechat_bridge.attachments.images import decode_image
-    from wechat_bridge.attachments.cache import cache_decoded
-    from tests.support.schemas import account_case
-    from hashlib import sha256
     raw=png()
     with pytest.raises(BridgeError,match="content_too_large"):
         decode_image(io.BytesIO(raw),material=None,max_bytes=20)
-    cfg=account_case(tmp_path); result=decode_image(io.BytesIO(raw),material=None)
-    path=cache_decoded(result,sha256(raw).hexdigest(),cfg)
-    assert path.read_bytes()==raw
-    assert path.stat().st_mode & 0o777==0o600
-    assert cache_decoded(result,sha256(raw).hexdigest(),cfg)==path
+    assert decode_image(io.BytesIO(raw),material=None).data==raw
 
 
 def test_corrupt_png_checksum_is_bounded_diagnostic():

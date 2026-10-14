@@ -2,6 +2,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 import re
+import itertools
 import uuid
 
 from ..core.config import Config, read_private_json, write_private_json, reject_symlinks, state_lock
@@ -56,7 +57,10 @@ def discover(config: Config) -> Inventory:
             if not root.is_dir():
                 raise BridgeError("source_unreadable")
             databases, issues, observed = [], [], set()
-            for path in sorted(root.rglob("*")):
+            entries = list(itertools.islice(root.rglob("*"), 4097))
+            if len(entries) > 4096:
+                raise BridgeError("source_inventory_limit")
+            for path in sorted(entries):
                 if path.is_symlink():
                     raise BridgeError("source_symlink")
                 if ".kvdb" in path.name:

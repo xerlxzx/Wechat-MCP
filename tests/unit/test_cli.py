@@ -85,3 +85,16 @@ def test_server_startup_failure_never_prints_nonprotocol_stdout(tmp_path, capsys
     output = capsys.readouterr()
     assert output.out == ''
     assert json.loads(output.err) == {'error': 'invalid_private_state'}
+
+
+def test_unexpected_exception_prints_redacted_internal_error(tmp_path, capsys, monkeypatch):
+    from wechat_bridge.cli import main
+    private = str(tmp_path / "private-account-folder")
+
+    def fail(*args, **kwargs):
+        raise PermissionError(13, "denied", private)
+    monkeypatch.setattr("wechat_bridge.cli.discover", fail)
+    assert main(["--state-dir", str(tmp_path / "state"), "discover"]) == 2
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == {"error": "internal_error"}
+    assert private not in captured.out + captured.err

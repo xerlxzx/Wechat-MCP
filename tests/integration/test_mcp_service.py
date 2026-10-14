@@ -37,8 +37,7 @@ def test_service_delivers_verified_file_and_decoded_original_image(tmp_path):
     assert metadata['representation'] == 'original'
     assert metadata['content_representation'] == 'decoded'
     assert 'relative_path' not in metadata
-    cached = list((case.config.state_dir / 'decoded').glob('*'))
-    assert cached and cached[0].stat().st_mode & 0o777 == 0o600
+    assert not (case.config.state_dir / 'decoded').exists()
 
 
 def test_unsupported_decoded_format_can_return_separately_labeled_source(tmp_path):

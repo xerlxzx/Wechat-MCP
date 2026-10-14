@@ -6,6 +6,19 @@ to follow [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
 ## [Unreleased]
 
+### Changed
+
+- `discover` stops with `source_inventory_limit` after 4096 entries under
+  `db_storage`, matching the reconcile walk.
+- The CLI prints `{"error": "internal_error"}` and exits 2 on unexpected
+  exceptions instead of a traceback.
+- Build backend pinned to `hatchling==1.32.4`.
+
+### Removed
+
+- The write-only decoded-image cache (`state/decoded/`). Existing folders can
+  be deleted.
+
 ## [0.1.0] - Initial public release
 
 First public release. Experimental. M1 acceptance remains blocked (see the
