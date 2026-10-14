@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wechat-bridge"
+version = "0.1.1"
+description = "Local read-only WeChat source bridge"
+requires-python = ">=3.14,<3.15"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "cryptography>=50.0.2",
+    "mcp==2.3.0",
+    "pillow>=12.3.0",
+]
+
+[project.scripts]
+wechat-bridge = "wechat_bridge.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.hatch.build.targets.wheel.force-include]
+"third_party/licenses/acmerfight-toolkit.txt" = "wechat_bridge/_licenses/acmerfight-toolkit.txt"
+"THIRD_PARTY_NOTICES.md" = "wechat_bridge/_licenses/THIRD_PARTY_NOTICES.md"
