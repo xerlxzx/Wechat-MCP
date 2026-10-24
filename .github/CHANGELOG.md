@@ -6,6 +6,8 @@ to follow [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-24
+
 ### Fixed
 
 - The `serve` watcher no longer re-imports an unchanged source every 60 s. The
