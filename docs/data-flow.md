@@ -120,7 +120,9 @@ Steps 6 and 7 run at query time and never touch the source databases.
 - **Bounds:** one importer at a time (`archive_refresh_in_progress` for a
   second); an interrupted run restarts the full scan.
 - **Driver:** the watcher polls file metadata (1 s debounce) and reconciles
-  every 60 s while `serve` runs. Queries never trigger an import.
+  every 60 s while the source changes, backing off to hourly while it is
+  untouched, and rests after each refresh to cap its duty cycle at 20%. Queries
+  never trigger an import.
 
 ### 6. Search and query
 
