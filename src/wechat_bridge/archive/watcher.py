@@ -23,6 +23,17 @@ PERSISTENT_ERRORS = frozenset({'unsupported_build', 'archive_account_mismatch'})
 BLOCKED_ERRORS = KEY_STATE_ERRORS | PERSISTENT_ERRORS
 BLOCKED_RETRY_SECONDS = 3600.0
 LOCK_RETRY_SECONDS = 30.0
+# Every refresh is a full import that rewrites the whole archive. The periodic
+# reconcile is a safety net for a change the metadata fingerprint missed, so while
+# the source stays untouched it backs off (doubling up to this ceiling) instead of
+# rewriting an unchanged archive every reconcile_seconds. A fingerprint change
+# restores the short interval.
+RECONCILE_CEILING_SECONDS = 3600.0
+# Whatever triggers a refresh (a source write, a periodic tick, a retry after a
+# failure, including codes not in BLOCKED_ERRORS), the watcher then rests so it
+# never works more than this fraction of the time. Without the cap a refresh
+# that outlasts the debounce or the reconcile interval runs back to back.
+MAX_DUTY_CYCLE = 0.2
 
 
 def key_state(config):
@@ -54,26 +65,32 @@ class ArchiveWatcher:
     """Poll the source fingerprint and refresh the archive after a debounce or on a fixed interval.
 
     Needs an existing active generation (archive_not_ready) and intervals in (0, 3600] seconds.
+    An idle reconcile doubles the next interval up to RECONCILE_CEILING_SECONDS, a source change
+    restores reconcile_seconds, and each refresh is followed by rest that caps the duty cycle at
+    MAX_DUTY_CYCLE.
     """
     def __init__(self, config, *, debounce_seconds=1.0, reconcile_seconds=60.0,
-                 adapter_factory=open_adapter):
+                 adapter_factory=open_adapter, clock=time.monotonic):
         for value in (debounce_seconds, reconcile_seconds):
             if type(value) not in (float, int) or not math.isfinite(value) or not 0 < value <= 3600:
                 raise BridgeError('invalid_watch_interval')
         self.config, self.adapter_factory = config, adapter_factory
         self.debounce_seconds, self.reconcile_seconds = debounce_seconds, reconcile_seconds
+        self._clock = clock
         status = Archive(config).status()
         if status['active_generation'] is None:
             raise BridgeError('archive_not_ready')
         self._seen = status['source_fingerprint']
         self._pending_since = None
         self._last_attempt = None
+        self._not_before = -math.inf
+        self._reconcile_interval = reconcile_seconds
         self._blocked = False
         self._blocked_on = None
 
     def poll(self, *, now=None, cancel_event=None):
         """Run at most one refresh if one is due; return its status, or None when idle."""
-        now = time.monotonic() if now is None else now
+        now = self._clock() if now is None else now
         if self._last_attempt is None:
             self._last_attempt = now
         try:
@@ -83,23 +100,31 @@ class ArchiveWatcher:
         if current != self._seen:
             self._seen = current
             self._pending_since = now
-        periodic = now - self._last_attempt >= self.reconcile_seconds
+            self._reconcile_interval = self.reconcile_seconds
+        periodic = now - self._last_attempt >= self._reconcile_interval
         changed = self._pending_since is not None and now - self._pending_since >= self.debounce_seconds
         if not periodic and not changed:
+            return None
+        if now < self._not_before:
             return None
         if (self._blocked and key_state(self.config) == self._blocked_on
                 and now - self._last_attempt < BLOCKED_RETRY_SECONDS):
             return None
         self._last_attempt, self._pending_since = now, None
         blocked_on = key_state(self.config)
+        started = self._clock()
         try:
             result = refresh_archive(self.config, adapter_factory=self.adapter_factory, cancel_event=cancel_event)
         except BridgeError as error:
             return {'status': 'deferred', 'error': error.code}
+        finally:
+            self._not_before = now + (self._clock() - started) / MAX_DUTY_CYCLE
         self._blocked = result['status'] == 'failed' and result['error'] in BLOCKED_ERRORS
         self._blocked_on = blocked_on
         if result['status'] == 'complete':
             self._seen = Archive(self.config).status()['source_fingerprint']
+            if not changed:  # An idle reconcile found nothing new: wait longer next time.
+                self._reconcile_interval = min(2 * self._reconcile_interval, RECONCILE_CEILING_SECONDS)
         return result
 
     def run(self, stop_event):
