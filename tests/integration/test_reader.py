@@ -120,6 +120,11 @@ import os, signal, threading, time
 from tests.integration.test_reader import source_case
 from tests.support.encrypted import KEY
 from wechat_bridge.source.reader import open_source
+# Python only installs its default SIGINT handler when SIGINT is not inherited as
+# ignored. Backgrounded shell jobs and some CI runners start children that way, and
+# the reader deliberately leaves a caller's explicit SIG_IGN alone, so pin the
+# disposition this test is about instead of depending on how pytest was launched.
+signal.signal(signal.SIGINT, signal.default_int_handler)
 with TemporaryDirectory() as directory:
     _, writer, config, db = source_case(Path(directory).resolve()); writer.close()
     with open_source(db, KEY, config=config) as reader:

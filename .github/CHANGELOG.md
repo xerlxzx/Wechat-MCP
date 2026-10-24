@@ -6,6 +6,15 @@ to follow [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-24
+
+### Fixed
+
+- The `serve` watcher no longer re-imports an unchanged source every 60 s. The
+  periodic reconcile backs off to hourly while the source is untouched, and
+  every refresh is followed by idle time that caps the watcher at 20% of a core,
+  so a source written steadily or a repeating failure cannot hold it busy.
+
 ## [0.1.1] - 2026-10-15
 
 ### Changed

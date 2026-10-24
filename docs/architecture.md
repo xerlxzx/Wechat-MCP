@@ -152,7 +152,12 @@ holder leaves no stale lock.
   reconciliation restarts the full bounded scan and does not resume batches.
   This choice favors correctness over an unmeasured large-archive optimization.
 - **Watcher:** polls DB/WAL metadata (1 s debounce) and runs a full reconcile every
-  60 s. It runs independently of queries; queries never trigger import. Concurrent
+  60 s while the source is changing. A reconcile that finds the source untouched
+  doubles the next interval, up to one hour, and a source change restores 60 s,
+  since every refresh rewrites the whole archive. Every attempt is followed by
+  idle time of four times its own duration (`MAX_DUTY_CYCLE`, 20%), so a busy
+  source or a repeating failure cannot hold a core. It runs independently of
+  queries; queries never trigger import. Concurrent
   `serve` sessions coordinate on `.archive-watcher.lock` so only one watcher
   polls per state directory at a time; the others retry the lock every 30 s and
   take over if the holder exits. After a `setup_required`,
@@ -160,8 +165,9 @@ holder leaves no stale lock.
   failure the watcher retries only when `keys.json` changes or after an hour,
   since source writes cannot clear those states and each attempt records a
   failed generation. A refresh that fails with another code is retried on the
-  next 60 s reconcile. A refresh blocked by `.archive-import.lock` returns
-  `deferred` without recording a generation.
+  next reconcile (60 s, never sooner than the duty-cycle rest). A refresh
+  blocked by `.archive-import.lock` returns `deferred` without recording a
+  generation.
 - **Attachments:** files ≤ 200 MiB; images ≤ 50 MiB encoded/decoded and ≤ 40 M
   pixels. Static JPEG/PNG/WebP, legacy XOR and verified V1/V2 DAT decode;
   animated, WXGF and HEVC are unsupported. A thumbnail never stands in for an

@@ -14,7 +14,8 @@ uv run wechat-bridge serve --no-watch  # deterministic session, no watcher
 A first archive import needs `wechat-bridge archive-refresh`. The server never
 imports or decrypts at query time. With watching enabled and an active
 generation present at startup, a background thread polls DB/WAL metadata and
-reconciles every 60 seconds. If no generation exists when `serve` starts, no
+reconciles every 60 seconds while the source changes, backing off to hourly
+while it is untouched. If no generation exists when `serve` starts, no
 watcher starts; run `archive-refresh`, then restart `serve`. On disconnect the
 watcher receives a stop signal and is joined for up to 8 seconds. A slow native
 read can outlive the join, and the next import reclaims an unfinished
